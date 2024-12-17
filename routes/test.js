@@ -5,7 +5,7 @@ const path = require('path');
 const xlsx = require('xlsx');
 const fs = require('fs');
 const Test = require('../models/Test');
-const User = require('../models/user');
+const User = require('../models/User');
 const { authMiddleware, isAdmin } = require('../middleware/authMiddleware');
 
 // Configure multer for file upload
