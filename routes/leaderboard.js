@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Test = require('../models/Test');
-const User = require('../models/user');
+const User = require('../models/User');
 
 // Route to fetch leaderboard
 router.get('/', async (req, res) => {
