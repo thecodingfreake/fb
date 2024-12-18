@@ -1,12 +1,16 @@
 const express = require("express");
 const multer = require("multer");
 const xlsx = require("xlsx");
-const fs = require("fs");
 const Module = require("../models/Module");
 
 const router = express.Router();
-const upload = multer({ dest: "uploads/" });
 
+// Use memory storage with multer
+const upload = multer({ storage: multer.memoryStorage() });
+
+/**
+ * Route to upload Excel file and save course data to MongoDB
+ */
 router.post("/", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
@@ -23,8 +27,8 @@ router.post("/", upload.single("file"), async (req, res) => {
       return res.status(400).json({ message: "Banner image is required." });
     }
 
-    // Parse Excel file
-    const workbook = xlsx.readFile(req.file.path);
+    // Parse the uploaded file from memory
+    const workbook = xlsx.read(req.file.buffer, { type: "buffer" });
     const sheetName = workbook.SheetNames[0];
     const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
@@ -85,27 +89,19 @@ router.post("/", upload.single("file"), async (req, res) => {
     });
 
     // Save or update the module in MongoDB
-    await Module.findOneAndUpdate(
+    const savedModule = await Module.findOneAndUpdate(
       { moduleId: moduleData.moduleId }, // Find by unique moduleId
       { $set: moduleData }, // Replace document with new data
       { upsert: true, new: true } // Insert if not found, return the new document
     );
 
-    // Delete the uploaded file
-    fs.unlink(req.file.path, (err) => {
-      if (err) {
-        console.error("Failed to delete the file:", err);
-        return res.status(500).json({ message: "Data saved, but failed to delete the file." });
-      }
-    });
-
     // Response with course data
     res.status(200).json({
-      message: "File uploaded, data saved, and file deleted successfully.",
+      message: "File uploaded and data saved successfully.",
       module: {
-        title: moduleData.title,
-        totalSubmodules: moduleData.totalSubmodules,
-        totalTime: moduleData.totalTime,
+        title: savedModule.title,
+        totalSubmodules: savedModule.totalSubmodules,
+        totalTime: savedModule.totalTime,
       },
     });
   } catch (error) {
@@ -114,7 +110,9 @@ router.post("/", upload.single("file"), async (req, res) => {
   }
 });
 
-// Route to get course details
+/**
+ * Route to get all course details
+ */
 router.get("/courses", async (req, res) => {
   try {
     // Fetch all modules and their course details
